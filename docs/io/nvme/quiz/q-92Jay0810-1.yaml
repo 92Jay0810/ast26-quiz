@@ -1,5 +1,5 @@
 author: 92Jay0810
-date: 2026-03-20
+date: 2026-03-01
 question: |
   傳統儲存介面（如使用 AHCI 協定的 SATA）通常受限於單一 Request Queue，而 NVMe 規格定義了多組 
   **Submission Queue (SQ)** 與 **Completion Queue (CQ)**，並允許每個 CPU core 
@@ -22,7 +22,7 @@ options:
 
   - text: "多個 Queue 設計旨在縮短單一指令的傳輸路徑 (Path Length)，藉此抵消快閃記憶體 (NAND Flash) 先天的物理讀取延遲。"
     explanation: |
-      傳輸路徑的縮短來自於 NVMe 簡化了軟體協定層次（相較於 SCSI/ATA），
+      傳輸路徑的縮短來自於 NVMe 簡化了軟體協定層次（相較於 SCSI 或 ATA），
       而非單純增加 Queue 的數量。Queue 的數量增加是為了解決「等待」而非「傳輸速度」。
 
   - text: "多個 Queue 可提供硬體層級的優先級排序 (Strict Priority)，確保高優先級應用程式能獲得比單一 Queue 更低的平均深度 (Queue Depth)。"
