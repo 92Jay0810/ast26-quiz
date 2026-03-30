@@ -1,0 +1,28 @@
+author: 92Jay0810
+date: 2026-03-31
+question: |
+  某系統工程師比較兩種 I/O 設計：
+
+  - **設計 A：** 完全 kernel bypass（例如 SPDK）
+  - **設計 B：** 使用 `io_uring`（仍經 kernel，但透過 shared ring buffer 減少 syscall）
+
+  實驗發現，在某些 workload 下，設計 B 的效能接近甚至超過設計 A。
+  請分析最合理的原因：
+options:
+  - text: "io_uring 並未消除 kernel involvement，因此不等同於 kernel bypass"
+    explanation: |
+      io_uring 並未繞過 kernel，而是透過 shared ring buffer（submission queue 與 completion queue）降低 syscall 與 context switch 成本。
+      kernel 仍參與 I/O 處理，因此此說法不正確。
+  - text: "io_uring 透過 shared memory queue 減少 syscall 與 context switch，同時保留 kernel 的資源管理與最佳化"
+    correct: true
+    explanation: |
+      io_uring 使用 shared ring buffer（SQ / CQ）讓 user space 與 kernel 之間以低成本溝通，減少 syscall 與 context switch。
+      同時仍保留 kernel 的 I/O scheduling、資源管理與快取機制，因此在非極端低延遲 workload 下可能達到更好的整體效能。
+  - text: "io_uring 強制使用 page cache，因此在所有 workload 都比 kernel bypass 快"
+    explanation: |
+      io_uring 並不強制使用 page cache，可搭配 buffered I/O 或 direct I/O。
+      效能表現取決於 workload 特性，而非必然優於 kernel bypass。
+  - text: "io_uring 使用 interrupt 而非 polling，因此 latency 一定更低"
+    explanation: |
+      interrupt 與 polling 各有適用情境，沒有絕對優劣。
+      在高 IOPS 情境下，polling 反而可能具有更低 latency，因此此說法不成立。
