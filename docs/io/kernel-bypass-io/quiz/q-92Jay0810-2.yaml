@@ -2,9 +2,10 @@ author: 92Jay0810
 date: 2026-03-31
 question: |
   某系統使用 kernel bypass I/O（user space queue + polling）直接操作 NVMe SSD，並觀察到 throughput 對 batch size 非常敏感。
+  該系統的設計是累積一批 command 寫入 submission queue（SQ）後，才統一寫一次 doorbell register 通知 controller，這個累積的數量稱為 batch size。
   當 batch size 過小時，整體效能顯著下降。
 
-  假設 I/O queue depth 足夠高，且裝置本身沒有成為瓶頸，請分析最合理的原因：
+  假設系統同時有大量 in-flight I/O 請求，裝置內部的平行性已被充分利用，且裝置本身沒有成為 bottleneck，請分析最合理的原因：
 options:
   - text: "batch size 過小會增加 user space 與 kernel 之間的 context switch 次數，導致效能下降"
     explanation: |
@@ -21,5 +22,5 @@ options:
       因此 cache miss 並不是此情境下的主要因素。
   - text: "batch size 過小會限制 NVMe controller 的內部平行性，使 DMA 無法同時處理多個 I/O"
     explanation: |
-      NVMe 的平行性主要來自 queue depth 與裝置內部設計，題目已假設 queue depth 足夠高，因此裝置仍可維持高平行性。
-      batch size 影響的是提交效率，而非 DMA 是否能並行執行。
+      NVMe 的平行性主要來自 in-flight I/O 數量與裝置內部設計，題目已假設有大量 in-flight I/O，表示裝置平行性已被充分利用。
+      batch size 影響的是 submission 效率，而非裝置端的平行處理能力。
