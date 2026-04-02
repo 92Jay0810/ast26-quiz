@@ -15,9 +15,9 @@ question: |
   工程師乙的說法正確嗎？原因最接近下列哪一個描述？
 
 options:
-  - text: "工程師乙正確。因為 slot array 只能往後增長，slotted page 在結構上根本不允許重用中間的 unused slot，否則 pd_lower 指標的語義會被破壞。"
+  - text: "工程師乙正確。因為 slot array 只能往後增長，slotted page 在結構上根本不允許重用中間的 unused slot，否則 `pd_lower` 指標的語義會被破壞。"
     explanation: |
-      重用 unused slot 不需要動 pd_lower，pd_lower 只追蹤 slot array 的末端。
+      重用 unused slot 不需要動 `pd_lower`，`pd_lower` 只追蹤 slot array 的末端。
       結構上完全允許，問題在於「安不安全」，而非「能不能」。
   - text: "工程師乙正確。因為 B+Tree index 的 leaf node 可能仍然持有指向 `(page_id, 2)` 的 pointer；若把新 record 放到 slot 2，這個 index entry 就會變成 dangling pointer，指向完全不同的 record。"
     correct: true
