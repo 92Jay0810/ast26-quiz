@@ -1,27 +1,26 @@
 author: 92Jay0810
-date: 2026-05-17
+date: 2026-05-18
 question: |
-  某伺服器採用硬體 RAID-1 陣列。當系統處理一筆寫入請求時，RAID controller 決定將資料寫入 Disk 0 與 Disk 1。假設 controller 已成功將新資料寫入 Disk 0，但在向 Disk 1 發出寫入指令前，伺服器遭遇無預警斷電。
-  若該 RAID controller 缺乏針對 consistent-update problem 的保護機制，且不考慮上層檔案系統的介入，系統重啟後會處於何種狀態？現代標準的硬體 RAID 陣列通常採用何種機制來解決此問題？
+  某伺服器採用硬體 RAID-1，若 controller 已將資料寫入 Disk 0，但在向 Disk 1 發出寫入指令前發生斷電，重啟後 Disk 0 與 Disk 1 處於 mirror 不一致狀態（一顆有新資料、一顆有舊資料）。下列何者最能描述現代硬體 RAID 如何解決此問題？
 
 options:
-  - text: "重啟後，Disk 1 的韌體會透過比對 logical block address 的時間戳記，自動從 Disk 0 複製較新的資料以維持同步。現代 RAID 依賴硬碟內建的 volatile cache 來避免寫入中斷。"
-    explanation: |
-      標準的 block storage 介面並沒有提供 block 級別的時間戳記或版本控制。
-      底層硬碟本身不具備識別哪一份資料較新的機制。此外，volatile cache 在斷電時**資料會直接流失**，無法用來解決斷電導致的跨磁碟狀態不一致問題。
-
-  - text: "重啟後，Disk 0 儲存新資料而 Disk 1 儲存舊資料，導致 mirror 狀態不一致。現代硬體 RAID 會配置 NVRAM，在寫入磁碟前先記錄狀態，重啟時透過重播日誌來確保跨磁碟寫入的 atomicity。"
-    correct: true
-    explanation: |
-      這是 multi-disk 系統中經典的 consistent-update problem。
-      因為跨磁碟的實體寫入無法同時完成，時間差內的斷電會造成兩顆磁碟資料不一致。為了確保狀態改變的 **atomicity**，硬體 RAID 會利用 NVRAM 作為日誌記錄區來避免每次都寫入實體磁碟的效能損耗，並在執行實體 I/O 前先寫入 write-ahead log，重啟時即可依據日誌進行同步復原。
-
-  - text: "由於寫入指令尚未完整發出至所有磁碟，RAID controller 重啟時會將 Disk 0 的新資料視為 orphan block 並自動捨棄，回復到斷電前的舊資料狀態。現代 RAID 依賴底層硬碟的 error log 來觸發回復機制。"
-    explanation: |
-      RAID 運作於 block layer，缺乏檔案系統層級的高階邏輯（如 transaction 或 orphan block 的概念）。
-      單純的 RAID controller 若無日誌機制，在讀取時只會依照既定策略（例如 round-robin）從其中一顆磁碟提取資料，無法主動比對兩顆磁碟內容的差異，也無法依靠硬碟的 error log 來**主動捨棄**特定資料。
-
-  - text: "重啟後，雖然底層資料不一致，但上層檔案系統的 journal replay 程序在啟動時會識別出此底層錯誤，並強制覆寫雙邊磁碟。現代 RAID 依賴作業系統層級的軟體整合來確保底層狀態安全。"
+  - text: "依賴作業系統層級的軟體整合，透過檔案系統的 journal replay 程序在啟動時識別出底層錯誤，並強制覆寫雙邊磁碟。"
     explanation: |
       這誤解了系統分層的概念。
-      上層軟體發出的 I/O 請求對 RAID 而言只是一般的 logical block write，作業系統與檔案系統**無法看見** RAID 內部的實體磁碟配置。因此，讀取到新版或舊版的資料，完全取決於 RAID controller 當時將讀取請求導向哪一顆硬碟，上層機制無法直接介入並修復底層的 mirror 不一致問題。
+      上層軟體發出的 I/O 請求對 RAID 而言只是一般的 logical block write，作業系統與檔案系統**無法看見** RAID 內部的實體磁碟配置。因此，上層機制無法直接介入並修復底層的 mirror 不一致問題。
+
+  - text: "配置 NVRAM 作為日誌記錄區，在執行實體 I/O 前先寫入 write-ahead log，重啟時透過重播日誌來確保跨磁碟寫入的 atomicity。"
+    correct: true
+    explanation: |
+      這是 multi-disk 系統中解決 consistent-update problem 的標準做法。
+      跨磁碟的實體寫入無法同時完成，時間差內的斷電會造成資料不一致。為了確保狀態改變的 **atomicity**，硬體 RAID 利用 NVRAM 來避免每次都寫入實體磁碟的效能損耗，並透過日誌進行同步復原。
+
+  - text: "依賴底層硬碟的 error log 來觸發回復機制，將僅存在於單一磁碟的新資料視為 orphan block 並自動捨棄。"
+    explanation: |
+      RAID 運作於 block layer，缺乏檔案系統層級的高階邏輯（如 orphan block 的概念）。
+      單純的 RAID controller 在讀取時只會依照既定策略（例如 round-robin）提取資料，無法主動比對內容差異，也無法依靠硬碟的 error log 來**主動捨棄**特定資料。
+
+  - text: "依賴硬碟內建的 volatile cache 避免寫入中斷，或透過比對 logical block address 的時間戳記，自動複製較新的資料以維持同步。"
+    explanation: |
+      volatile cache 在斷電時**資料會直接流失**，無法防範斷電造成的問題。
+      此外，標準的 block storage 介面並沒有提供 block 級別的時間戳記，底層硬碟本身不具備識別哪一份資料較新的機制。
